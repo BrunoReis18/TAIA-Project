@@ -1,7 +1,10 @@
+  
 from itertools import product
 import random
 import time
+import copy
 import timeit
+import numpy as np
 
 ROWS = 8
 COLS = 8
@@ -17,9 +20,27 @@ class Board:
         self.cross_pieces = 2
         self.total_pieces = 4
         self.score = {'Cross':2,'Circle':2}
-        self.create_board()
-    
+        self.init_liberty = [
+        [ 3, 5, 5, 5, 5, 5, 5, 3 ],
+        [ 5, 8, 8, 8, 8, 8, 8, 5 ],
+        [ 5, 8, 8, 8, 8, 8, 8, 5 ],
+        [ 5, 8, 8, 8, 8, 8, 8, 5 ],
+        [ 5, 8, 8, 8, 8, 8, 8, 5 ],
+        [ 5, 8, 8, 8, 8, 8, 8, 5 ],
+        [ 5, 8, 8, 8, 8, 8, 8, 5 ],
+        [ 3, 5, 5, 5, 5, 5, 5, 3 ]]
 
+        self.create_board()
+        
+        self.liberty = [
+        [ 3, 5, 5, 5, 5, 5, 5, 3 ],
+        [ 5, 8, 8, 8, 8, 8, 8, 5 ],
+        [ 5, 8, 7, 6, 6, 7, 8, 5 ],
+        [ 5, 8, 6, 5, 5, 6, 8, 5 ],
+        [ 5, 8, 6, 5, 5, 6, 8, 5 ],
+        [ 5, 8, 7, 6, 6, 7, 8, 5 ],
+        [ 5, 8, 8, 8, 8, 8, 8, 5 ],
+        [ 3, 5, 5, 5, 5, 5, 5, 3 ]]
 
     def create_board(self):
         for row in range(8):
@@ -35,6 +56,16 @@ class Board:
         self.board_pos[(4,5)] = 3
         self.board_pos[(5,4)] = 3
     
+    def update_liberty(self,pos):
+
+        for d in DIRS:
+            new_pos = self.sum_tuples(pos,d)
+            if not self.is_outside_board(new_pos):
+                self.liberty[new_pos[0]][new_pos[1]] -= 1
+            
+    def pre_compute_rows_cols(self):
+        return
+
     def get_rep(self,val):
         switcher={
                 0:' ',
@@ -67,12 +98,14 @@ class Board:
         return
 
     def is_outside_board(self,pos):
-        return False if (0 <= pos[0] <= ROWS-1 and 0 <= pos[1] <= COLS-1) else True
+        #return False if self.board_pos.get(pos,-1) != -1 else True
+        return (pos[0] < 0 or pos[0] >= ROWS or pos[1] < 0 or pos[1] >= COLS)
 
     @staticmethod
     def sum_tuples(t1,t2):
         return (t1[0]+t2[0],t1[1]+t2[1])
     
+
     @staticmethod
     def sub_tuples(t1,t2):
         return (t1[0]-t2[0],t1[1]-t2[1])
@@ -116,15 +149,24 @@ class Board:
         cnt = 0
         turn = False
 
-        while not self.is_outside_board(shft) and self.board_pos[shft] != 0: #iterate over opponent pieces
+        while 1: #iterate over opponent pieces note: this config of if statements maximizes 
+            
+            if self.is_outside_board(shft):
+                break
 
-            if self.board_pos[shft] == 3-self.playing:
-                cnt += 1
+            if self.board_pos[shft] == 0:  
+                break
+            
             if self.board_pos[shft] == self.playing:
                 turn = True
                 break
-            if self.board_pos[shft] == 0 or self.board_pos[shft] == 3:
+
+            if self.board_pos[shft] == 3:
                 break
+            
+            if self.board_pos[shft] == 3-self.playing:
+                cnt += 1
+
             
             shft = self.sum_tuples(shft,dir)
 
@@ -137,7 +179,8 @@ class Board:
                     self.board_pos[k] = 0
         
         for k in self.board_pos.keys():
-            if self.board_pos[k] == 0:
+            if self.board_pos[k] == 0 and self.liberty[k[0]][k[1]] < self.init_liberty[k[0]][k[1]]:
+
                 for dir in DIRS:
                     mob = self.check_mobility_dir(k,dir)
                     if mob:
@@ -182,6 +225,8 @@ class Board:
 
         self.board_pos[(row,col)] = self.playing
         
+        self.update_liberty((row,col))
+
         for dir in DIRS:
             self.turn_pieces_dir((row,col),dir)
         
@@ -227,9 +272,9 @@ class Board:
 def main():
 
     start = time.process_time()
-# your code here    
-
-    for i in range(1):
+    othello_board = Board()
+    
+    for i in range(1000):
         othello_board = Board()
         othello_board.draw_board()
         going = True
@@ -237,8 +282,8 @@ def main():
             going = othello_board.update_board("",True)
             othello_board.draw_board()
 
-
     print(time.process_time() - start)
+
 
 
 if __name__ == "__main__":
